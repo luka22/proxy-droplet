@@ -9,3 +9,6 @@ terraform.tfstate.backup
 # Variable files (may contain secrets)
 *.tfvars
 *.tfvars.json
+
+# Node
+node_modules/
