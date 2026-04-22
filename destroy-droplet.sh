@@ -17,6 +17,8 @@ if [ -z "$DO_SSH_KEY" ]; then
   exit 1
 fi
 
-terraform destroy -auto-approve \
-  -var "do_token=$DO_PAT" \
-  -var "ssh_key_name=$DO_SSH_KEY"
+# Pass credentials to Terraform via env vars to avoid exposing them in the process list
+export TF_VAR_do_token="$DO_PAT"
+export TF_VAR_ssh_key_name="$DO_SSH_KEY"
+
+terraform destroy -auto-approve

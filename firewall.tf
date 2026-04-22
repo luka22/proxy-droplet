@@ -1,6 +1,6 @@
 resource "digitalocean_firewall" "proxy" {
   name        = "proxy-ssh-only"
-  droplet_ids = [digitalocean_droplet.www-1.id]
+  droplet_ids = [digitalocean_droplet.proxy.id]
 
   # Only allow SSH inbound — all other ports are blocked
   inbound_rule {

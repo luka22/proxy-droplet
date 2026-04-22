@@ -31,6 +31,10 @@ if [ ! -f "$SSH_KEY_PATH" ]; then
   exit 1
 fi
 
+# Pass credentials to Terraform via env vars to avoid exposing them in the process list
+export TF_VAR_do_token="$DO_PAT"
+export TF_VAR_ssh_key_name="$DO_SSH_KEY"
+
 # Resolve script directory so destroy-droplet.sh can be called from anywhere
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -60,10 +64,7 @@ select REGION_CHOICE in "${REGIONS[@]}"; do
 done
 
 # Provision the droplet via Terraform
-terraform apply -auto-approve \
-  -var "do_token=$DO_PAT" \
-  -var "ssh_key_name=$DO_SSH_KEY" \
-  -var "region=$REGION"
+terraform apply -auto-approve -var "region=$REGION"
 
 # Extract the droplet's public IP from Terraform output
 IP=$(terraform output -raw ipv4_address 2>/dev/null || terraform state show digitalocean_droplet.www-1 2>/dev/null | grep 'ipv4_address ' | awk '{print $3}' | tr -d '"')
@@ -100,14 +101,16 @@ if [ -n "$IP" ]; then
   echo "Pinning host key..."
   ssh-keyscan -H "$IP" >> "$KNOWN_HOSTS_TMP" 2>/dev/null
 
-  # Install and run fortune on the remote droplet
-  echo "Fortune says:"
-  ssh -i "$SSH_KEY_PATH" \
-    -o StrictHostKeyChecking=yes \
-    -o UserKnownHostsFile="$KNOWN_HOSTS_TMP" \
-    -o LogLevel=ERROR \
-    root@$IP "cloud-init status --wait > /dev/null 2>&1; DEBIAN_FRONTEND=noninteractive apt-get update -qq > /dev/null 2>&1 && apt-get install -yqq fortune-mod fortunes > /dev/null 2>&1 && /usr/games/fortune"
-  echo ""
+  # Install and run fortune on the remote droplet (set SKIP_FORTUNE=1 to skip)
+  if [ "${SKIP_FORTUNE:-0}" != "1" ]; then
+    echo "Fortune says:"
+    ssh -i "$SSH_KEY_PATH" \
+      -o StrictHostKeyChecking=yes \
+      -o UserKnownHostsFile="$KNOWN_HOSTS_TMP" \
+      -o LogLevel=ERROR \
+      root@$IP "cloud-init status --wait > /dev/null 2>&1; DEBIAN_FRONTEND=noninteractive apt-get update -qq > /dev/null 2>&1 && apt-get install -yqq fortune-mod fortunes > /dev/null 2>&1 && /usr/games/fortune"
+    echo ""
+  fi
 
   echo ""
   cat << 'EOF'

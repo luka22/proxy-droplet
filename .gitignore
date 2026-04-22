@@ -4,11 +4,10 @@ terraform.tfstate.backup
 
 # Terraform working directory
 .terraform/
-.terraform.lock.hcl
 
 # Variable files (may contain secrets)
 *.tfvars
 *.tfvars.json
 
-# Node
-node_modules/
+# Local tooling
+mise.toml

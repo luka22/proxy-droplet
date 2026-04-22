@@ -25,6 +25,8 @@ Spin up a disposable DigitalOcean SOCKS5 proxy in seconds. A single command prov
 terraform init
 ```
 
+> The `.terraform.lock.hcl` file is committed to this repo — it pins the provider version so you get consistent behaviour without needing to re-resolve dependencies.
+
 ### 2. Set environment variables
 
 ```bash
@@ -71,6 +73,7 @@ To destroy manually (e.g. after an unexpected exit):
 | `DO_SSH_KEY`   | ✅       | —                    | SSH key name in your DigitalOcean account        |
 | `SSH_KEY_PATH` | —        | `~/.ssh/id_ed25519`  | Path to the local SSH private key file           |
 | `SOCKS_PORT`   | —        | `1337`               | Local port to bind the SOCKS5 tunnel             |
+| `SKIP_FORTUNE` | —        | `0`                  | Set to `1` to skip the fortune install (~30s)    |
 
 ## Available regions
 

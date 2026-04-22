@@ -1,17 +1,15 @@
 # Fetch the Debian 12 image to use as the droplet OS
-data "digitalocean_image" "ubuntu" {
+data "digitalocean_image" "debian" {
   slug = "debian-12-x64"
 }
 
 # Minimal droplet used as a SOCKS5 proxy — no provisioning needed
-resource "digitalocean_droplet" "www-1" {
-  image  = data.digitalocean_image.ubuntu.id
-  name   = "sandbox"
+resource "digitalocean_droplet" "proxy" {
+  image  = data.digitalocean_image.debian.id
+  name   = "proxy-droplet"
   region = var.region
   size   = "s-1vcpu-512mb-10gb"
-  ssh_keys = [
-    data.digitalocean_ssh_key.terraform.id
-  ]
+  ssh_keys  = [data.digitalocean_ssh_key.terraform.id]
 
   user_data = <<-EOF
     #!/bin/bash
@@ -29,5 +27,5 @@ resource "digitalocean_droplet" "www-1" {
 
 # Expose the droplet's public IP for use in the SSH tunnel command
 output "ipv4_address" {
-  value = digitalocean_droplet.www-1.ipv4_address
+  value = digitalocean_droplet.proxy.ipv4_address
 }
