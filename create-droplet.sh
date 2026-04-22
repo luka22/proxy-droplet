@@ -101,14 +101,16 @@ if [ -n "$IP" ]; then
   echo "Pinning host key..."
   ssh-keyscan -H "$IP" >> "$KNOWN_HOSTS_TMP" 2>/dev/null
 
-  # Install and run fortune on the remote droplet
-  echo "Fortune says:"
-  ssh -i "$SSH_KEY_PATH" \
-    -o StrictHostKeyChecking=yes \
-    -o UserKnownHostsFile="$KNOWN_HOSTS_TMP" \
-    -o LogLevel=ERROR \
-    root@$IP "cloud-init status --wait > /dev/null 2>&1; DEBIAN_FRONTEND=noninteractive apt-get update -qq > /dev/null 2>&1 && apt-get install -yqq fortune-mod fortunes > /dev/null 2>&1 && /usr/games/fortune"
-  echo ""
+  # Install and run fortune on the remote droplet (set SKIP_FORTUNE=1 to skip)
+  if [ "${SKIP_FORTUNE:-0}" != "1" ]; then
+    echo "Fortune says:"
+    ssh -i "$SSH_KEY_PATH" \
+      -o StrictHostKeyChecking=yes \
+      -o UserKnownHostsFile="$KNOWN_HOSTS_TMP" \
+      -o LogLevel=ERROR \
+      root@$IP "cloud-init status --wait > /dev/null 2>&1; DEBIAN_FRONTEND=noninteractive apt-get update -qq > /dev/null 2>&1 && apt-get install -yqq fortune-mod fortunes > /dev/null 2>&1 && /usr/games/fortune"
+    echo ""
+  fi
 
   echo ""
   cat << 'EOF'
