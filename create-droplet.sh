@@ -67,7 +67,7 @@ done
 terraform apply -auto-approve -var "region=$REGION"
 
 # Extract the droplet's public IP from Terraform output
-IP=$(terraform output -raw ipv4_address 2>/dev/null || terraform state show digitalocean_droplet.www-1 2>/dev/null | grep 'ipv4_address ' | awk '{print $3}' | tr -d '"')
+IP=$(terraform output -raw ipv4_address)
 
 if [ -n "$IP" ]; then
   echo ""

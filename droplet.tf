@@ -5,11 +5,11 @@ data "digitalocean_image" "debian" {
 
 # Minimal droplet used as a SOCKS5 proxy — no provisioning needed
 resource "digitalocean_droplet" "proxy" {
-  image  = data.digitalocean_image.debian.id
-  name   = "proxy-droplet"
-  region = var.region
-  size   = "s-1vcpu-512mb-10gb"
-  ssh_keys  = [data.digitalocean_ssh_key.terraform.id]
+  image    = data.digitalocean_image.debian.id
+  name     = "proxy-droplet"
+  region   = var.region
+  size     = "s-1vcpu-512mb-10gb"
+  ssh_keys = [data.digitalocean_ssh_key.terraform.id]
 
   user_data = <<-EOF
     #!/bin/bash
