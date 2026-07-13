@@ -1,6 +1,8 @@
 #! /bin/bash
 # Creates a DigitalOcean droplet and opens a SOCKS5 proxy tunnel on port 1337.
 # Automatically destroys the droplet when the tunnel is closed (Ctrl+C).
+# The firewall is restricted to the machine's detected public IP; falls back
+# to 0.0.0.0/0 if detection fails.
 #
 # Required environment variables:
 #   DO_PAT         — DigitalOcean API token
@@ -63,8 +65,21 @@ select REGION_CHOICE in "${REGIONS[@]}"; do
   fi
 done
 
+# Detect our own public IP so the firewall can restrict SSH to it instead of 0.0.0.0/0.
+# Falls back to the Terraform default (open to all) if detection fails.
+echo "Detecting your public IP..."
+MY_IP=$(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null || curl -fsS --max-time 5 https://ifconfig.me 2>/dev/null || true)
+
+if [[ "$MY_IP" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+  echo "Restricting SSH to $MY_IP/32"
+  ALLOWED_SSH_CIDR="$MY_IP/32"
+else
+  echo "Warning: could not detect public IP. SSH will be open to 0.0.0.0/0."
+  ALLOWED_SSH_CIDR="0.0.0.0/0"
+fi
+
 # Provision the droplet via Terraform
-terraform apply -auto-approve -var "region=$REGION"
+terraform apply -auto-approve -var "region=$REGION" -var "allowed_ssh_cidr=$ALLOWED_SSH_CIDR"
 
 # Extract the droplet's public IP from Terraform output
 IP=$(terraform output -raw ipv4_address)
@@ -83,7 +98,7 @@ if [ -n "$IP" ]; then
         -o UserKnownHostsFile=/dev/null \
         -o ConnectTimeout=5 \
         -o BatchMode=yes \
-        root@$IP true 2>/dev/null; then
+        root@"$IP" true 2>/dev/null; then
       echo "SSH is ready."
       break
     fi
@@ -108,7 +123,7 @@ if [ -n "$IP" ]; then
       -o StrictHostKeyChecking=yes \
       -o UserKnownHostsFile="$KNOWN_HOSTS_TMP" \
       -o LogLevel=ERROR \
-      root@$IP "cloud-init status --wait > /dev/null 2>&1; DEBIAN_FRONTEND=noninteractive apt-get update -qq > /dev/null 2>&1 && apt-get install -yqq fortune-mod fortunes > /dev/null 2>&1 && /usr/games/fortune"
+      root@"$IP" "cloud-init status --wait > /dev/null 2>&1; DEBIAN_FRONTEND=noninteractive apt-get update -qq > /dev/null 2>&1 && apt-get install -yqq fortune-mod fortunes > /dev/null 2>&1 && /usr/games/fortune"
     echo ""
   fi
 
@@ -137,5 +152,5 @@ EOF
     -o UserKnownHostsFile="$KNOWN_HOSTS_TMP" \
     -o ServerAliveInterval=60 \
     -o ServerAliveCountMax=3 \
-    root@$IP || true
+    root@"$IP" || true
 fi

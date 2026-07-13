@@ -2,11 +2,11 @@ resource "digitalocean_firewall" "proxy" {
   name        = "proxy-ssh-only"
   droplet_ids = [digitalocean_droplet.proxy.id]
 
-  # Only allow SSH inbound — all other ports are blocked
+  # Only allow SSH inbound, from the caller's IP by default — all other ports/sources are blocked
   inbound_rule {
     protocol         = "tcp"
     port_range       = "22"
-    source_addresses = ["0.0.0.0/0", "::/0"]
+    source_addresses = [var.allowed_ssh_cidr]
   }
 
   # Allow all outbound so the proxy can reach the internet

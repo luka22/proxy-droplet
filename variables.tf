@@ -14,3 +14,9 @@ variable "region" {
   type        = string
   default     = "sfo3"
 }
+
+variable "allowed_ssh_cidr" {
+  description = "CIDR allowed to SSH into the droplet"
+  type        = string
+  default     = "0.0.0.0/0"
+}
