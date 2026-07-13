@@ -1,5 +1,7 @@
 # proxy-droplet
 
+[![CI](https://github.com/luka22/proxy-droplet/actions/workflows/ci.yml/badge.svg)](https://github.com/luka22/proxy-droplet/actions/workflows/ci.yml)
+
 Spin up a disposable DigitalOcean SOCKS5 proxy in seconds. A single command provisions a minimal Debian droplet via Terraform, opens an SSH SOCKS5 tunnel on port 1337, and tears everything down automatically when you're done.
 
 ## How it works
@@ -90,10 +92,16 @@ To destroy manually (e.g. after an unexpected exit):
 
 ## Security notes
 
-- The droplet allows **SSH inbound only** (firewall blocks all other ports)
+- The droplet allows **SSH inbound only** (firewall blocks all other ports), and by default only from your detected public IP (falls back to open if detection fails — see below)
 - Password authentication and empty passwords are disabled via `cloud-init`
 - The SSH host key is pinned on first connect to protect against MITM attacks
 - The droplet is billed only for the time it exists (typically a few minutes per session)
+
+### SSH firewall restriction
+
+`create-droplet.sh` detects your public IP (via `api.ipify.org`, falling back to `ifconfig.me`) and restricts the firewall's SSH rule to that `/32`. If detection fails, it falls back to `0.0.0.0/0` (open) so the script still works.
+
+Because the IP is captured once at `terraform apply` time, if your public IP changes mid-session (Wi-Fi drop, VPN toggle, carrier NAT reassignment) an already-open tunnel will likely keep working on its existing connection, but a fresh SSH connection would be blocked — you'd need to `destroy-droplet.sh` and re-run `create-droplet.sh` from the new IP.
 
 ## Cost
 
