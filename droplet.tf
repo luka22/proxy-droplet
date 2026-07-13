@@ -1,6 +1,6 @@
-# Fetch the Debian 12 image to use as the droplet OS
+# Fetch the Debian 13 image to use as the droplet OS
 data "digitalocean_image" "debian" {
-  slug = "debian-12-x64"
+  slug = "debian-13-x64"
 }
 
 # Minimal droplet used as a SOCKS5 proxy — no provisioning needed
