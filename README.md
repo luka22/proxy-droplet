@@ -15,9 +15,11 @@ Spin up a disposable DigitalOcean SOCKS5 proxy in seconds. A single command prov
 
 - [Terraform](https://developer.hashicorp.com/terraform/install) ≥ 1.0
 - A [DigitalOcean](https://www.digitalocean.com/) account with:
-  - An API token (Personal Access Token with read/write scope)
-  - An SSH key uploaded to your account (**Settings → Security → SSH Keys**)
-- The corresponding SSH private key on your local machine
+  - A [Personal Access Token](https://docs.digitalocean.com/reference/api/create-personal-access-token/) with read/write scope — this is `DO_PAT`
+  - An SSH key [uploaded to your account](https://docs.digitalocean.com/platform/teams/how-to/upload-ssh-keys/) — its **name** in DigitalOcean is `DO_SSH_KEY`
+- The corresponding SSH **private key file** on your local machine — its **path** is `SSH_KEY_PATH`
+
+> `DO_SSH_KEY` and `SSH_KEY_PATH` refer to the same key pair but aren't interchangeable: `DO_SSH_KEY` is the name shown in your DigitalOcean account, while `SSH_KEY_PATH` is the local file path to the matching private key (e.g. `~/.ssh/my-key`, not `~/.ssh/my-key.pub`).
 
 ## Setup
 
