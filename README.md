@@ -19,7 +19,7 @@ Spin up a disposable DigitalOcean SOCKS5 proxy in seconds. A single command prov
   - An SSH key [uploaded to your account](https://docs.digitalocean.com/platform/teams/how-to/upload-ssh-keys/) — its **name** in DigitalOcean is `DO_SSH_KEY`
 - The corresponding SSH **private key file** on your local machine — its **path** is `SSH_KEY_PATH`
 
-> `DO_SSH_KEY` and `SSH_KEY_PATH` refer to the same key pair but aren't interchangeable: `DO_SSH_KEY` is the name shown in your DigitalOcean account, while `SSH_KEY_PATH` is the local file path to the matching private key (e.g. `~/.ssh/my-key`, not `~/.ssh/my-key.pub`). DigitalOcean's dashboard layout changes from time to time — if you can't find where to view tokens/keys, see [Troubleshooting](#troubleshooting) below for an API-based way to look them up.
+> `DO_SSH_KEY` and `SSH_KEY_PATH` refer to the same key pair but aren't interchangeable: `DO_SSH_KEY` is the name shown in your DigitalOcean account, while `SSH_KEY_PATH` is the local file path to the matching private key (e.g. `~/.ssh/my-key`, not `~/.ssh/my-key.pub`).
 
 ## Setup
 
@@ -108,31 +108,3 @@ Because the IP is captured once at `terraform apply` time, if your public IP cha
 ## Cost
 
 Uses the smallest DigitalOcean droplet (`s-1vcpu-512mb-10gb`, ~$4/month). Since it's destroyed after each session, a typical 1-hour session costs less than a cent.
-
-## Troubleshooting
-
-**`Error: DO_SSH_KEY environment variable is not set` (or `DO_PAT`), even though you set it before**
-
-Environment variables only live in the shell session they were set in — they don't carry over to a new terminal window, tab, or app (e.g. switching from iTerm to another terminal). Re-export both in the new session, or persist them in your shell profile (e.g. `~/.zshrc`) if you don't want to repeat this — just don't commit your `DO_PAT` anywhere.
-
-**Can't find where to view/create your API token or SSH keys in the DigitalOcean dashboard**
-
-DigitalOcean reorganizes its control panel from time to time, so menu paths in this README (or in DigitalOcean's own docs) can go stale. The reliable fallback is to ask the API directly:
-
-```bash
-# List SSH key names already uploaded to your account — whichever matches
-# your local key's name is your DO_SSH_KEY
-curl -s -H "Authorization: Bearer $DO_PAT" "https://api.digitalocean.com/v2/account/keys" \
-  | jq -r '.ssh_keys[].name'
-```
-
-See DigitalOcean's docs on [personal access tokens](https://docs.digitalocean.com/reference/api/create-personal-access-token/) and [SSH keys](https://docs.digitalocean.com/platform/teams/how-to/upload-ssh-keys/) for the current dashboard flow.
-
-**`Error: image not found: GET .../images/debian-<version>-x64: 404`**
-
-DigitalOcean retires an image slug shortly after that Debian release reaches end-of-life. Check which Debian slugs are currently supported, and if needed update the `slug` in `droplet.tf`'s `data "digitalocean_image" "debian"` block to match:
-
-```bash
-curl -s -H "Authorization: Bearer $DO_PAT" "https://api.digitalocean.com/v2/images?type=distribution&per_page=200" \
-  | jq -r '.images[] | select(.distribution=="Debian") | .slug'
-```
