@@ -4,6 +4,10 @@
 
 Spin up a disposable DigitalOcean SOCKS5 proxy in seconds. A single command provisions a minimal Debian droplet via Terraform, opens an SSH SOCKS5 tunnel on port 1337, and tears everything down automatically when you're done.
 
+![Simulated walkthrough of create-droplet.sh: selecting a region, provisioning the droplet, opening the tunnel, then destroying it on Ctrl+C](assets/demo.gif)
+
+> Simulated walkthrough — mocked output with compressed timings, not a live recording (droplet creation normally takes ~30-60s to reach SSH-ready).
+
 ## How it works
 
 1. `create-droplet.sh` prompts you to choose a region, then provisions a Debian 13 droplet with Terraform
