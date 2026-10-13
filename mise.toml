@@ -1,5 +1,5 @@
 [tools]
-hk = "latest"
+hk = "1.58.1"  # hk 2.x is incompatible with the 1.x Pkl config in hk.pkl
 shellcheck = "latest"
 terraform = "latest"
 zizmor = "latest"
