@@ -20,5 +20,7 @@ fi
 # Pass credentials to Terraform via env vars to avoid exposing them in the process list
 export TF_VAR_do_token="$DO_PAT"
 export TF_VAR_ssh_key_name="$DO_SSH_KEY"
+# Required by the config but irrelevant to destroy; placeholder avoids an interactive prompt
+export TF_VAR_allowed_ssh_cidr="${TF_VAR_allowed_ssh_cidr:-127.0.0.1/32}"
 
 terraform destroy -auto-approve

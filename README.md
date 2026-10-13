@@ -65,7 +65,7 @@ Point your browser's SOCKS5 proxy to `localhost:1337` (or whichever port you set
 
 ### 5. Stop
 
-Press `Ctrl+C`. The tunnel closes and the droplet is destroyed automatically.
+Press `Ctrl+C`. The tunnel closes and the droplet is destroyed automatically. The droplet is also destroyed if the script fails partway or the tunnel drops.
 
 To destroy manually (e.g. after an unexpected exit):
 
@@ -82,6 +82,7 @@ To destroy manually (e.g. after an unexpected exit):
 | `SSH_KEY_PATH` | —        | `~/.ssh/id_ed25519`  | Path to the local SSH private key file           |
 | `SOCKS_PORT`   | —        | `1337`               | Local port to bind the SOCKS5 tunnel             |
 | `SKIP_FORTUNE` | —        | `0`                  | Set to `1` to skip the fortune install (~30s)    |
+| `ALLOWED_SSH_CIDR` | —    | detected IP `/32`    | CIDR allowed to SSH in; skips IP detection       |
 
 ## Available regions
 
@@ -98,14 +99,14 @@ To destroy manually (e.g. after an unexpected exit):
 
 ## Security notes
 
-- The droplet allows **SSH inbound only** (firewall blocks all other ports), and by default only from your detected public IP (falls back to open if detection fails — see below)
-- Password authentication and empty passwords are disabled via `cloud-init`
+- The droplet allows **SSH inbound only** (firewall blocks all other ports), and only from your detected public IP (the script aborts if detection fails — see below)
+- Password and keyboard-interactive auth are disabled and root is key-only, via an `sshd_config.d/00-hardening.conf` drop-in written by `cloud-init`
 - The SSH host key is pinned on first connect to protect against MITM attacks
 - The droplet is billed only for the time it exists (typically a few minutes per session)
 
 ### SSH firewall restriction
 
-`create-droplet.sh` detects your public IP (via `api.ipify.org`, falling back to `ifconfig.me`) and restricts the firewall's SSH rule to that `/32`. If detection fails, it falls back to `0.0.0.0/0` (open) so the script still works.
+`create-droplet.sh` detects your public IP (via `api.ipify.org`, falling back to `ifconfig.me`) and restricts the firewall's SSH rule to that `/32`. If detection fails, the script exits without creating anything. Set `ALLOWED_SSH_CIDR` to skip detection (e.g. `ALLOWED_SSH_CIDR=203.0.113.7/32`); setting it to `0.0.0.0/0` opens SSH to everyone and is not recommended.
 
 Because the IP is captured once at `terraform apply` time, if your public IP changes mid-session (Wi-Fi drop, VPN toggle, carrier NAT reassignment) an already-open tunnel will likely keep working on its existing connection, but a fresh SSH connection would be blocked — you'd need to `destroy-droplet.sh` and re-run `create-droplet.sh` from the new IP.
 
