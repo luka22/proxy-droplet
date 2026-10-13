@@ -1,8 +1,8 @@
 #! /bin/bash
 # Creates a DigitalOcean droplet and opens a SOCKS5 proxy tunnel on port 1337.
 # Automatically destroys the droplet when the tunnel is closed (Ctrl+C).
-# The firewall is restricted to the machine's detected public IP; falls back
-# to 0.0.0.0/0 if detection fails.
+# The firewall is restricted to the machine's detected public IP; the script
+# aborts if detection fails, unless ALLOWED_SSH_CIDR is set explicitly.
 #
 # Required environment variables:
 #   DO_PAT         — DigitalOcean API token
@@ -11,6 +11,7 @@
 # Optional environment variables:
 #   SSH_KEY_PATH   — Path to the private key file (default: ~/.ssh/id_ed25519)
 #   SOCKS_PORT     — Local port for the SOCKS5 tunnel (default: 1337)
+#   ALLOWED_SSH_CIDR — CIDR allowed to SSH in (default: detected public IP /32)
 set -e
 
 SSH_KEY_PATH="${SSH_KEY_PATH:-$HOME/.ssh/id_ed25519}"
@@ -40,13 +41,11 @@ export TF_VAR_ssh_key_name="$DO_SSH_KEY"
 # Resolve script directory so destroy-droplet.sh can be called from anywhere
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Temp file to hold the pinned host key for this session
-KNOWN_HOSTS_TMP=$(mktemp)
-
-# Called on Ctrl+C or TERM signal — tears down the droplet automatically
+# Runs on any exit once provisioning starts — tears down the droplet automatically
 cleanup() {
+  trap - EXIT INT TERM
   echo ""
-  echo "Tunnel closed. Destroying droplet..."
+  echo "Destroying droplet..."
   rm -f "$KNOWN_HOSTS_TMP"
   "$SCRIPT_DIR/destroy-droplet.sh"
 }
@@ -65,18 +64,31 @@ select REGION_CHOICE in "${REGIONS[@]}"; do
   fi
 done
 
-# Detect our own public IP so the firewall can restrict SSH to it instead of 0.0.0.0/0.
-# Falls back to the Terraform default (open to all) if detection fails.
-echo "Detecting your public IP..."
-MY_IP=$(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null || curl -fsS --max-time 5 https://ifconfig.me 2>/dev/null || true)
-
-if [[ "$MY_IP" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
-  echo "Restricting SSH to $MY_IP/32"
-  ALLOWED_SSH_CIDR="$MY_IP/32"
+# Detect our own public IPv4 so the firewall can restrict SSH to it. Fails closed:
+# if detection fails, abort rather than opening SSH to the internet.
+if [ -n "$ALLOWED_SSH_CIDR" ]; then
+  echo "Using ALLOWED_SSH_CIDR=$ALLOWED_SSH_CIDR"
 else
-  echo "Warning: could not detect public IP. SSH will be open to 0.0.0.0/0."
-  ALLOWED_SSH_CIDR="0.0.0.0/0"
+  echo "Detecting your public IP..."
+  MY_IP=$(curl -4 -fsS --max-time 5 https://api.ipify.org 2>/dev/null || curl -4 -fsS --max-time 5 https://ifconfig.me 2>/dev/null || true)
+
+  if [[ "$MY_IP" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+    echo "Restricting SSH to $MY_IP/32"
+    ALLOWED_SSH_CIDR="$MY_IP/32"
+  else
+    echo "Error: could not detect your public IPv4 address."
+    echo "Set ALLOWED_SSH_CIDR explicitly (e.g. 203.0.113.7/32) and re-run."
+    exit 1
+  fi
 fi
+
+# Temp file to hold the pinned host key for this session
+KNOWN_HOSTS_TMP=$(mktemp)
+
+# From here on, any exit (error, Ctrl+C, tunnel drop) destroys the droplet
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # Provision the droplet via Terraform
 terraform apply -auto-approve -var "region=$REGION" -var "allowed_ssh_cidr=$ALLOWED_SSH_CIDR"
@@ -105,9 +117,7 @@ if [ -n "$IP" ]; then
     echo "  Attempt $i/30 failed, retrying in 5s..."
     sleep 5
     if [ "$i" -eq 30 ]; then
-      echo "Error: SSH did not become available after 150s. Destroying droplet."
-      rm -f "$KNOWN_HOSTS_TMP"
-      "$SCRIPT_DIR/destroy-droplet.sh"
+      echo "Error: SSH did not become available after 150s."
       exit 1
     fi
   done
@@ -144,8 +154,6 @@ EOF
   echo ""
 
   echo "Starting SOCKS tunnel on port $SOCKS_PORT... (Ctrl+C to stop and destroy droplet)"
-  # Destroy droplet on Ctrl+C or termination signal
-  trap cleanup INT TERM
   # Open SOCKS5 tunnel: -D binds local port, -C enables compression, -N skips remote command
   ssh -i "$SSH_KEY_PATH" -D "$SOCKS_PORT" -C -N \
     -o StrictHostKeyChecking=yes \
