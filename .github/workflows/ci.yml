@@ -17,7 +17,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14 # v4
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v4
         with:
           install: true
           cache: true
